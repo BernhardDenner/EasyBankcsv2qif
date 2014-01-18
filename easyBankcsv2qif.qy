@@ -2,13 +2,16 @@
 
 
 
-import csv, sys
+from __future__ import print_function
+import sys
+import csv
 import re
 import argparse
 
+
 parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
 parser.add_argument('-d', '--debug', action="store_true",
-                    help='print debugging output instead of QIF format')
+                    help='print debugging information to stderr')
 parser.add_argument('-a', '--account', 
                     help="account name to use, if not given no account information will be in the QIF")                    
 #parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
@@ -124,31 +127,75 @@ class Transaction(object):
         
     
     def printDebug(self):
-        print 'account: {}, date: {}, amount: {} {}'.format(self.account, self.date, self.amount, self.currency)
-        print 'desc: {}'.format(self.description)
-        print 'type,h: {},{}'.format(self.type, self.htype)
-        #print '   id: {}'.format(self.id)
-        print '    2: {}'.format(self.desc2)
-        print '    1: {}'.format(self.desc1)
-        print 'payee: {}'.format(self.payee)
-        print ' memo: {}'.format(self.memo)
-        print '-------------------------------------------'
+        print('account: {},'.format(self.account),
+              'date: {},'.format(self.date),
+              'amount: {} {}'.format(self.amount, self.currency), 
+              file=sys.stderr)
+
+        print('desc: {}'.format(self.description),
+              'type,h: {},{}'.format(self.type, self.htype),
+              #'   id: {}'.format(self.id),
+              '    2: {}'.format(self.desc2),
+              '    1: {}'.format(self.desc1),
+              'payee: {}'.format(self.payee),
+              ' memo: {}'.format(self.memo),
+              '-------------------------------------------',
+              file=sys.stderr, sep='\n')
+
         
-    def printQIF(self):
-        print 'D{}'.format(self.date)
-        print 'T{}'.format(self.amount)
-        print 'M{}'.format(self.memo)
+    def getQIFstr(self):
+        ret = 'D{}\n'.format(self.date) + \
+              'T{}\n'.format(self.amount) + \
+              'M{}\n'.format(self.memo)
+
         if self.payee is not None:
-            print 'P{}'.format(self.payee)
+            ret += 'P{}\n'.format(self.payee)
         info = None
         if self.htype is not None:
             info = self.htype
         elif self.type is not None:
             info = self.type
         if info is not None:
-            print 'N{}'.format(info)
-        print '^'
+            ret += 'N{}\n'.format(info)
+        ret += '^\n'
+        return ret
 
+
+
+class EasyCSV2QIFconverter:
+    """create for each row of the given CSV a Transaction object
+       a outputs this Transaction object to the given output file stream
+    """
+    def __init__(self, instream, outstream, account=None):
+        self._instream = instream
+        self._outstream = outstream
+        self._account = account
+
+    def convert(self):
+        if self._account is not None:
+            print('!Account',
+                  'N{}'.format(args.account),
+                  'Tcash',
+                  '^',
+                  '!Type:Bank', 
+                  sep='\n', file=self._outstream)
+
+        rows = csv.reader(self._instream, delimiter=';')
+        for l in rows:
+            if len(l) < 6:
+                print ('ignoring invalid line:', l, file=sys.stderr)
+                continue
+            t = Transaction()
+            t.account = l[0]
+            t.description = l[1]
+            t.date = l[2]
+            t.valutadate = l[3]
+            t.amount = l[4]
+            t.currency = l[5]
+            t.parseDescription()
+            self._outstream.write(t.getQIFstr())
+            if args.debug:
+                t.printDebug()
 
 
 
@@ -156,28 +203,8 @@ class Transaction(object):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    #print args.file
+    #print(args.file)
 
-    rows = csv.reader(sys.stdin, delimiter=';')
-
-    if not args.debug and args.account is not None:
-        print '!Account'
-        print 'N{}'.format(args.account)
-        print 'Tcash'
-        print '^'
-        print '!Type:Bank'
-
-    for l in rows:
-        t = Transaction()
-        t.account = l[0]
-        t.description = l[1]
-        t.date = l[2]
-        t.valutadate = l[3]
-        t.amount = l[4]
-        t.currency = l[5]
-        t.parseDescription()
-        if args.debug:
-            t.printDebug()
-        else:
-            t.printQIF()
+    converter = EasyCSV2QIFconverter(sys.stdin, sys.stdout, args.account)
+    converter.convert()
     
