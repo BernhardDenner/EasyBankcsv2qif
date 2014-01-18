@@ -1,0 +1,183 @@
+#!/usr/bin/python
+
+
+
+import csv, sys
+import re
+import argparse
+
+parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
+parser.add_argument('-d', '--debug', action="store_true",
+                    help='print debugging output instead of QIF format')
+parser.add_argument('-a', '--account', 
+                    help="account name to use, if not given no account information will be in the QIF")                    
+#parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
+
+
+
+
+
+class Transaction(object):
+    """ Transaction object, represents one transaction exratcted from the CSV
+        file
+    """
+    def __init__(self):
+        object.__init__(self)
+        self.account = ""
+        self.description = ""
+        self.date = ""
+        self.valutadate = ""
+        self.amount = "0"
+        self.currency = "EUR"
+        self.id = ""
+        self.type = None
+        self.payee = None
+        self.memo = None
+        # debug types
+        self.htype = ""
+        self.desc1 = ""
+        self.desc2 = ""
+
+    def parseDescription(self):
+        """parses the description field to get more detailed
+        information"""
+        r = re.match("^(.*)\W*([A-Z]{2})/([0-9]+)\W*(.*)?$", self.description)
+        if r is not None:
+            self.desc1 = r.group(1).strip()
+            self.type = r.group(2)
+            self.id = r.group(3)
+            self.desc2 = r.group(4).strip()
+            
+            # transfer
+            if (self.type == "BG" or self.type == "FE") \
+               and len(self.desc2) > 0 and len(self.desc1) > 0:
+                self.htype = "transfer"
+                m = re.match("^(([A-Z0-9]+\W)?[A-Z]*[0-9]+)\W(\w+\W+\w+)\W*(.*)$", self.desc2)
+                if m is not None:
+                    self.payee = m.group(3) + " (" + m.group(1) + ")"
+                    self.desc2 = m.group(1)
+                    self.memo = self.desc1 + " " + m.group(4)
+                    
+            # not really a transfer, but use the information we have
+            elif (self.type == "BG" or self.type == "MC") \
+               and len(self.desc1) == 0:
+                self.memo = self.desc2
+                    
+            elif (self.type == "BG" or self.type == "MC") \
+               and len(self.desc2) == 0:
+                self.memo = self.desc1
+                
+            # Maestro card (cash card) things
+            elif self.type == "MC" \
+                and len(self.desc1) > 0 and len(self.desc2) > 0:
+                # withdraw with cash card
+                m = re.match("^((Auszahlung)\W+\w+)\W*(.*)$", self.desc1)
+                if m is not None:
+                    self.htype = "withdraw"
+                    self.memo = m.group(1)
+                    if len(m.group(3)) > 0:
+                        self.memo += " (" + m.group(3) + ")" 
+                    self.memo += " " + self.desc2
+                # payment with cash card
+                m = re.match("^((Bezahlung)\W+\w+)\W*(.*)$", self.desc1)
+                if m is not None:
+                    self.htype = "payment"
+                    self.memo = m.group(1)
+                    if len(m.group(3)) > 0:
+                        self.memo += " (" + m.group(3) + ")" 
+                    self.memo += " " + self.desc2
+            
+            # mixture of transfer, cash card payments
+            elif self.type == "VD":
+                # if we have a value for desc1 but not for desc2
+                # it may be a cash card payment
+                if len(self.desc1) > 0 and len(self.desc2) == 0:
+                    self.htype = "payment"
+                    self.memo = self.desc1
+                    
+                # if we have values for both desc fields it may be a transfer
+                elif len(self.desc1) > 0 and len(self.desc2) > 0:
+                    self.htype = "transfer"
+                    self.memo = self.desc1
+                    m = re.match("^(([A-Z0-9]+\W)?[A-Z]*[0-9]+)?\W*(\w+\W+\w+)\W*(.*)$", self.desc2)
+                    if m is not None:
+                        self.payee = m.group(3)
+                        if m.group(1) is not None:
+                            self.payee += " (" + m.group(1) + ")"
+                        
+                        self.memo += " " + m.group(4)
+                        
+            # seems to be an cash card payment, however, I don't have enough
+            # infos about it
+            #elif self.type == "OG":
+            else:
+                # use what we have
+                self.memo = self.desc1 + " " + self.desc2
+        
+        # if we got an unkown description field, use it as memo
+        else:
+            self.memo = self.description    
+                        
+                
+
+        
+        
+    
+    def printDebug(self):
+        print 'account: {}, date: {}, amount: {} {}'.format(self.account, self.date, self.amount, self.currency)
+        print 'desc: {}'.format(self.description)
+        print 'type,h: {},{}'.format(self.type, self.htype)
+        #print '   id: {}'.format(self.id)
+        print '    2: {}'.format(self.desc2)
+        print '    1: {}'.format(self.desc1)
+        print 'payee: {}'.format(self.payee)
+        print ' memo: {}'.format(self.memo)
+        print '-------------------------------------------'
+        
+    def printQIF(self):
+        print 'D{}'.format(self.date)
+        print 'T{}'.format(self.amount)
+        print 'M{}'.format(self.memo)
+        if self.payee is not None:
+            print 'P{}'.format(self.payee)
+        info = None
+        if self.htype is not None:
+            info = self.htype
+        elif self.type is not None:
+            info = self.type
+        if info is not None:
+            print 'N{}'.format(info)
+        print '^'
+
+
+
+
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    #print args.file
+
+    rows = csv.reader(sys.stdin, delimiter=';')
+
+    if not args.debug and args.account is not None:
+        print '!Account'
+        print 'N{}'.format(args.account)
+        print 'Tcash'
+        print '^'
+        print '!Type:Bank'
+
+    for l in rows:
+        t = Transaction()
+        t.account = l[0]
+        t.description = l[1]
+        t.date = l[2]
+        t.valutadate = l[3]
+        t.amount = l[4]
+        t.currency = l[5]
+        t.parseDescription()
+        if args.debug:
+            t.printDebug()
+        else:
+            t.printQIF()
+    
