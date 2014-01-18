@@ -14,7 +14,9 @@ parser.add_argument('-d', '--debug', action="store_true",
                     help='print debugging information to stderr')
 parser.add_argument('-a', '--account', 
                     help="account name to use, if not given no account information will be in the QIF")                    
-#parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
+parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
+parser.add_argument('-o', '--output',
+                    help="output file, to write the resulting QIF. If not given stdout is used")
 
 
 
@@ -203,8 +205,39 @@ class EasyCSV2QIFconverter:
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    #print(args.file)
+    print("file:", args.file)
+    print("output:",args.output)
 
-    converter = EasyCSV2QIFconverter(sys.stdin, sys.stdout, args.account)
-    converter.convert()
+    outstream = None
+    instream = None
+
+    if args.file != "-":
+        try:
+            instream = open(args.file, 'r')
+        except IOError as detail:
+            print('could not open input file:', detail, file=sys.stderr)
+            sys.exit(1)
+
+    else:
+        instream = sys.stdin
+
     
+    if args.output:
+        try:
+            outstream = open(args.output, 'w')
+        except IOError as detail:
+            print('could not open output file:', detail, file=sys.stderr)
+            sys.exit(1)
+
+    else:
+        outstream = sys.stdout
+
+    converter = EasyCSV2QIFconverter(instream, outstream, args.account)
+    converter.convert()
+
+    if args.file != "-":
+        instream.close()
+    if args.output:
+        outstream.close()
+
+
