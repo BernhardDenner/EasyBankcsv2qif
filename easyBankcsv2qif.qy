@@ -10,13 +10,15 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
-parser.add_argument('-d', '--debug', action="store_true",
-                    help='print debugging information to stderr')
-parser.add_argument('-a', '--account', 
-                    help="account name to use, if not given no account information will be in the QIF")                    
 parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
 parser.add_argument('-o', '--output',
                     help="output file, to write the resulting QIF. If not given stdout is used")
+parser.add_argument('-a', '--account', 
+                    help="account name to use, if not given no account information will be in the QIF") 
+parser.add_argument('-d', '--debug', action="store_true",
+                    help='print debugging information to stderr, this option includes -s')
+parser.add_argument('-s', '--summary', action="store_true",
+                    help='print a summary to stderr')
 
 
 
@@ -123,7 +125,8 @@ class Transaction(object):
         else:
             self.memo = self.description    
                         
-                
+        if self.htype == "":
+            self.htype = 'unknown'
 
         
         
@@ -172,6 +175,7 @@ class EasyCSV2QIFconverter:
         self._instream = instream
         self._outstream = outstream
         self._account = account
+        self._transSummary = {}
 
     def convert(self):
         if self._account is not None:
@@ -199,14 +203,23 @@ class EasyCSV2QIFconverter:
             if args.debug:
                 t.printDebug()
 
+            if t.htype in self._transSummary:
+                self._transSummary[t.htype] += 1
+            else:
+                self._transSummary[t.htype] = 1
 
+    
+    def printSummary(self):
+        count = 0
+        for k, v in self._transSummary.iteritems():
+            print ('  {}:\t{}'.format(k, v), file=sys.stderr)
+            count += v
+        print('total transcation converted: {}'.format(count), file=sys.stderr)
 
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    print("file:", args.file)
-    print("output:",args.output)
 
     outstream = None
     instream = None
@@ -234,6 +247,8 @@ if __name__ == "__main__":
 
     converter = EasyCSV2QIFconverter(instream, outstream, args.account)
     converter.convert()
+    if args.debug or args.summary:
+        converter.printSummary()
 
     if args.file != "-":
         instream.close()
