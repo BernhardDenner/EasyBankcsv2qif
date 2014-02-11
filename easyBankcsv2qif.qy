@@ -1,6 +1,13 @@
 #!/usr/bin/python
+'''
+TODO: fill me
 
 
+based and inspired by http://code.google.com/p/xlscsv-to-qif/
+
+Author: berhard.denner@gmail.com
+Date: 16. Jan 2014
+'''
 
 from __future__ import print_function
 import sys
@@ -128,9 +135,7 @@ class Transaction(object):
         if self.htype == "":
             self.htype = 'unknown'
 
-        
-        
-    
+            
     def printDebug(self):
         print('account: {},'.format(self.account),
               'date: {},'.format(self.date),
