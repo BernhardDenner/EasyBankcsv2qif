@@ -16,6 +16,9 @@ import re
 import argparse
 
 
+encodingFrom = 'iso-8859-1'
+encodingTo = 'utf-8'
+
 parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
 parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
 parser.add_argument('-o', '--output',
@@ -29,7 +32,7 @@ parser.add_argument('-s', '--summary', action="store_true",
 
 
 
-
+doDebug = False
 
 class Transaction(object):
     """ Transaction object, represents one transaction exratcted from the CSV
@@ -185,7 +188,7 @@ class EasyCSV2QIFconverter:
     def convert(self):
         if self._account is not None:
             print('!Account',
-                  'N{}'.format(args.account),
+                  'N{}'.format(self._account),
                   'Tcash',
                   '^',
                   '!Type:Bank', 
@@ -197,15 +200,15 @@ class EasyCSV2QIFconverter:
                 print ('ignoring invalid line:', l, file=sys.stderr)
                 continue
             t = Transaction()
-            t.account = l[0]
-            t.description = l[1]
-            t.date = l[2]
-            t.valutadate = l[3]
-            t.amount = l[4]
-            t.currency = l[5]
+            t.account = l[0].decode(encodingFrom).encode(encodingTo)
+            t.description = l[1].decode(encodingFrom).encode(encodingTo) 
+            t.date = l[2].decode(encodingFrom).encode(encodingTo) 
+            t.valutadate = l[3].decode(encodingFrom).encode(encodingTo) 
+            t.amount = l[4].decode(encodingFrom).encode(encodingTo) 
+            t.currency = l[5].decode(encodingFrom).encode(encodingTo) 
             t.parseDescription()
             self._outstream.write(t.getQIFstr())
-            if args.debug:
+            if doDebug:
                 t.printDebug()
 
             if t.htype in self._transSummary:
@@ -214,17 +217,24 @@ class EasyCSV2QIFconverter:
                 self._transSummary[t.htype] = 1
 
     
-    def printSummary(self):
+    def getSummary(self):
+        ret = ""
         count = 0
         for k, v in self._transSummary.iteritems():
-            print ('  {}:\t{}'.format(k, v), file=sys.stderr)
+            ret += '  {}:\t{}\n'.format(k, v)
             count += v
-        print('total transcation converted: {}'.format(count), file=sys.stderr)
+        ret += 'total transcation converted: {}\n'.format(count)
+        return ret
+
+    def printSummary(self):
+        print(self.getSummary(), file=sys.stderr)
 
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    if args.debug:
+        doDebug = True
 
     outstream = None
     instream = None
