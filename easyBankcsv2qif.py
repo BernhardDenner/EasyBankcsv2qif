@@ -15,27 +15,32 @@ import csv
 import re
 import argparse
 
-
-parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
-parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
-parser.add_argument('-o', '--output',
-                    help="output file, to write the resulting QIF. If not given stdout is used")
-parser.add_argument('-a', '--account', 
-                    help="account name to use, if not given no account information will be in the QIF") 
-parser.add_argument('-d', '--debug', action="store_true",
-                    help='print debugging information to stderr, this option includes -s')
-parser.add_argument('-s', '--summary', action="store_true",
-                    help='print a summary to stderr')
-parser.add_argument('-t', '--encto',
-                    help='change the encoding to specified one \
-                          a list of valid encodings can be found here: \
-                          http://docs.python.org/2/library/codecs.html#standard-encodings')
-parser.add_argument('-f', '--encfrom',
-                    help='specify encoding for the input file')
-
-
-
+# global var for enabling debugging
 doDebug = False
+
+
+
+def createArgParser():
+    parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
+    parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
+    parser.add_argument('-o', '--output',
+                        help="output file, to write the resulting QIF. If not given stdout is used")
+    parser.add_argument('-a', '--account', 
+                        help="account name to use, if not given no account information will be in the QIF") 
+    parser.add_argument('-d', '--debug', action="store_true",
+                        help='print debugging information to stderr, this option includes -s')
+    parser.add_argument('-s', '--summary', action="store_true",
+                        help='print a summary to stderr')
+    parser.add_argument('-t', '--encto',
+                        help='change the encoding to specified one \
+                              a list of valid encodings can be found here: \
+                              http://docs.python.org/2/library/codecs.html#standard-encodings')
+    parser.add_argument('-f', '--encfrom',
+                        help='specify encoding for the input file')
+
+    return parser
+
+
 
 class Transaction(object):
     """ Transaction object, represents one transaction exratcted from the CSV
@@ -251,6 +256,7 @@ class EasyCSV2QIFconverter:
 
 
 if __name__ == "__main__":
+    parser = createArgParser()
     args = parser.parse_args()
     if args.debug:
         doDebug = True
