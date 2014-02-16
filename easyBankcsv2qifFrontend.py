@@ -95,4 +95,8 @@ if __name__ == "__main__":
     instream.close()
     outstream.close()
 
+    # show summary dialog
     f.processedDialog(converter.getSummary())
+
+    # remove the csv file
+    os.unlink(csvFilename)
