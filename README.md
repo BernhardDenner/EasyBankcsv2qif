@@ -24,3 +24,4 @@ This script is a small GTK3 frontend for easyBankcsv2qif.py. It takes the input 
 
 Note: the Frontend script uses a fixed enconding, from iso-8859-1 to utf-8
 
+Note: this is my first python script. Any comments on it are welcome ;)
