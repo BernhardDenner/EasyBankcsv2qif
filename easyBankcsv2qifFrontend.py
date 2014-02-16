@@ -1,5 +1,8 @@
 #!/usr/bin/python
-
+'''
+Author: bernhard.denner@gmail.com
+Date: 16. Feb 2014
+'''
 import sys, os
 import easyBankcsv2qif
 from gi.repository import Gtk
