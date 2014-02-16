@@ -5,6 +5,9 @@ import easyBankcsv2qif
 from gi.repository import Gtk
 
 
+DEFAULT_ENC_FROM = 'iso-8859-1'
+DEFAULT_ENC_TO   = 'utf-8'
+
 class Frontend(object):
 
     def __init__(self):
@@ -61,16 +64,16 @@ if __name__ == "__main__":
     
     f = Frontend()
 
-    filename = sys.argv[1]
+    csvFilename = sys.argv[1]
     instream = None
     try:
-        instream = open(filename, 'r')
+        instream = open(csvFilename, 'r')
     except IOError as detail:
-        f.errorMessage("could not open input file '" + filename + "'",
+        f.errorMessage("could not open input file '" + csvFilename + "'",
             str(detail))    
         sys.exit(1)
 
-    newFilename = os.path.basename(filename)
+    newFilename = os.path.basename(csvFilename)
     newFilename += ".qif"
 
     newFilename = f.saveDialog(newFilename)
@@ -90,6 +93,7 @@ if __name__ == "__main__":
 
     # do processing here
     converter = easyBankcsv2qif.EasyCSV2QIFconverter(instream, outstream, '')
+    converter.setEncoding(DEFAULT_ENC_FROM, DEFAULT_ENC_TO)
     converter.convert()
 
     instream.close()
