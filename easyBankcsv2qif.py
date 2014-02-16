@@ -16,9 +16,6 @@ import re
 import argparse
 
 
-encodingFrom = 'iso-8859-1'
-encodingTo = 'utf-8'
-
 parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
 parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
 parser.add_argument('-o', '--output',
@@ -29,6 +26,12 @@ parser.add_argument('-d', '--debug', action="store_true",
                     help='print debugging information to stderr, this option includes -s')
 parser.add_argument('-s', '--summary', action="store_true",
                     help='print a summary to stderr')
+parser.add_argument('-t', '--encto',
+                    help='change the encoding to specified one \
+                          a list of valid encodings can be found here: \
+                          http://docs.python.org/2/library/codecs.html#standard-encodings')
+parser.add_argument('-f', '--encfrom',
+                    help='specify encoding for the input file')
 
 
 
@@ -184,6 +187,8 @@ class EasyCSV2QIFconverter:
         self._outstream = outstream
         self._account = account
         self._transSummary = {}
+        self._encFrom = None
+        self._encTo = None
 
     def convert(self):
         if self._account is not None:
@@ -200,14 +205,16 @@ class EasyCSV2QIFconverter:
                 print ('ignoring invalid line:', l, file=sys.stderr)
                 continue
             t = Transaction()
-            t.account = l[0].decode(encodingFrom).encode(encodingTo)
-            t.description = l[1].decode(encodingFrom).encode(encodingTo) 
-            t.date = l[2].decode(encodingFrom).encode(encodingTo) 
-            t.valutadate = l[3].decode(encodingFrom).encode(encodingTo) 
-            t.amount = l[4].decode(encodingFrom).encode(encodingTo) 
-            t.currency = l[5].decode(encodingFrom).encode(encodingTo) 
+            t.account = self.changeEncoding(l[0])
+            t.description = self.changeEncoding(l[1])
+            t.date = self.changeEncoding(l[2])
+            t.valutadate = self.changeEncoding(l[3])
+            t.amount = self.changeEncoding(l[4])
+            t.currency = self.changeEncoding(l[5])
             t.parseDescription()
+
             self._outstream.write(t.getQIFstr())
+
             if doDebug:
                 t.printDebug()
 
@@ -216,7 +223,19 @@ class EasyCSV2QIFconverter:
             else:
                 self._transSummary[t.htype] = 1
 
-    
+
+    def setEncoding(self, encodingFrom, encodingTo):
+        self._encFrom = encodingFrom
+        self._encTo = encodingTo
+
+
+    def changeEncoding(self, text):
+        if self._encFrom != None and self._encTo != None:
+            return text.decode(self._encFrom).encode(self._encTo)
+        
+        return text
+
+
     def getSummary(self):
         ret = ""
         count = 0
@@ -261,6 +280,9 @@ if __name__ == "__main__":
         outstream = sys.stdout
 
     converter = EasyCSV2QIFconverter(instream, outstream, args.account)
+    if args.encto and args.encfrom:
+        converter.setEncoding(args.encfrom, args.encto)    
+
     converter.convert()
     if args.debug or args.summary:
         converter.printSummary()
