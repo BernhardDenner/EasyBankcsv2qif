@@ -92,14 +92,21 @@ class Transaction(object):
                     self.payee = m.group(3) + " (" + m.group(1) + ")"
                     self.desc2 = m.group(1)
                     self.memo = self.desc1 + " " + m.group(4)
+            
+            # BG can meen "Bankgebuehren" (bankfee), therefore the desc2 XOR desc1 is empty
+            elif (self.type in ["BG", "RI"] and len(self.desc2) == 0):
+                self.memo = self.desc1
+                self.htype = "bankfee"
+                    
+            elif (self.type in ["BG", "RI"] and len(self.desc1) == 0):
+                self.memo = self.desc2
+                self.htype = "bankfee"
                     
             # not really a transfer, but use the information we have
-            elif (self.type == "BG" or self.type == "MC") \
-               and len(self.desc1) == 0:
+            elif self.type == "MC" and len(self.desc1) == 0:
                 self.memo = self.desc2
                     
-            elif (self.type == "BG" or self.type == "MC") \
-               and len(self.desc2) == 0:
+            elif self.type == "MC" and len(self.desc2) == 0:
                 self.memo = self.desc1
                 
             # Maestro card (cash card) things
@@ -141,7 +148,14 @@ class Transaction(object):
                             self.payee += " (" + m.group(1) + ")"
                         
                         self.memo += " " + m.group(4)
-                        
+            
+            # OG also seems to be a payment transaction
+            elif self.type == "OG":
+                self.htype = "payment"
+                # here we have desc1 and desc2
+                self.memo = "{} {}".format(self.desc1, self.desc2)
+                
+                
             # seems to be an cash card payment, however, I don't have enough
             # infos about it
             #elif self.type == "OG":
@@ -155,6 +169,20 @@ class Transaction(object):
                         
         if self.htype == "":
             self.htype = 'unknown'
+            
+        # finally, some clean up
+        self.memo = self.cleanStr(self.memo)
+        self.payee = self.cleanStr(self.payee)
+
+
+    def cleanStr(self, string):
+        if string is not None:
+            # remove too much whitespace 
+            # begin and end and more than two in the middle
+            pat = re.compile(r'\s\s+')
+            string = pat.sub(" ", string.strip())
+            
+        return string
 
             
     def printDebug(self):
@@ -234,7 +262,7 @@ class EasyCSV2QIFconverter:
 
             # some debugging
             if doDebug:
-                print('csv: {}'.format(l), file=sys.stderr)
+                #print('csv: {}'.format(l), file=sys.stderr)
                 t.printDebug()
 
             # count abount of different transaction types 
