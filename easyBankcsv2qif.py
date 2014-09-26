@@ -63,9 +63,19 @@ class Transaction(object):
         self.desc1 = ""
         self.desc2 = ""
 
+    def setTransaction(self, account, description, date, valutadate, amount, currency):
+        self.account = account
+        self.description = description
+        self.date = date
+        self.valutadate = valutadate
+        self.amount = amount
+        self.currency = currency
+        self.parseDescription()
+
+
     def parseDescription(self):
-        """parses the description field to get more detailed
-        information"""
+        """ parses the description field to get more detailed information
+        """
         r = re.match("^(.*)\W*([A-Z]{2})/([0-9]+)\W*(.*)?$", self.description)
         if r is not None:
             self.desc1 = r.group(1).strip()
@@ -184,8 +194,8 @@ class Transaction(object):
 
 
 class EasyCSV2QIFconverter:
-    """create for each row of the given CSV a Transaction object
-       a outputs this Transaction object to the given output file stream
+    """ create for each row of the given CSV a Transaction object
+        a outputs this Transaction object to the given output file stream
     """
     def __init__(self, instream, outstream, account=None):
         self._instream = instream
@@ -209,20 +219,25 @@ class EasyCSV2QIFconverter:
             if len(l) < 6:
                 print ('ignoring invalid line:', l, file=sys.stderr)
                 continue
+                
+            l = map(self.changeEncoding, l)
+                
             t = Transaction()
-            t.account = self.changeEncoding(l[0])
-            t.description = self.changeEncoding(l[1])
-            t.date = self.changeEncoding(l[2])
-            t.valutadate = self.changeEncoding(l[3])
-            t.amount = self.changeEncoding(l[4])
-            t.currency = self.changeEncoding(l[5])
-            t.parseDescription()
+            t.setTransaction(l[0],  # account
+                             l[1],  # description
+                             l[2],  # date
+                             l[3],  # valutadate
+                             l[4],  # amount
+                             l[5])  # currency
 
             self._outstream.write(t.getQIFstr())
 
+            # some debugging
             if doDebug:
+                print('csv: {}'.format(l), file=sys.stderr)
                 t.printDebug()
 
+            # count abount of different transaction types 
             if t.htype in self._transSummary:
                 self._transSummary[t.htype] += 1
             else:
