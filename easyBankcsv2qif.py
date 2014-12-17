@@ -26,7 +26,7 @@ def createArgParser():
     parser.add_argument('-o', '--output',
                         help="output file, to write the resulting QIF. If not given stdout is used")
     parser.add_argument('-a', '--account', 
-                        help="account name to use, if not given no account information will be in the QIF") 
+                        help="account name to use, if not given no account name information will be in the QIF") 
     parser.add_argument('-d', '--debug', action="store_true",
                         help='print debugging information to stderr, this option includes -s')
     parser.add_argument('-s', '--summary', action="store_true",
@@ -225,7 +225,7 @@ class EasyCSV2QIFconverter:
     """ create for each row of the given CSV a Transaction object
         a outputs this Transaction object to the given output file stream
     """
-    def __init__(self, instream, outstream, account=None):
+    def __init__(self, instream, outstream, account=''):
         self._instream = instream
         self._outstream = outstream
         self._account = account
