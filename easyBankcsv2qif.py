@@ -53,6 +53,7 @@ class Transaction(object):
         self.date = ""
         self.valutadate = ""
         self.amount = "0"
+        self.category = "unknown"
         self.currency = "EUR"
         self.id = ""
         self.type = None
@@ -75,43 +76,51 @@ class Transaction(object):
 
     def parseDescription(self):
         """ parses the description field to get more detailed information
-        """
-        r = re.match("^(.*)\W*([A-Z]{2})/([0-9]+)\W*(.*)?$", self.description)
+        """ 
+        r = re.match("^(?:(?P<Description>.*?)\s*)?(?:(?P<Type>[A-Z]{2})/(?P<Number>\d+))(?:\s+(?P<Konto>\d{5} \d{5,11})|(?:\s+(?P<BIC>[\w]{8,11}))?\s+(?P<IBAN>[A-Z]{2}[\w]{13,32}))?(?:\s+(?P<Name>.*))$", self.description)
         if r is not None:
-            self.desc1 = r.group(1).strip()
-            self.type = r.group(2)
-            self.id = r.group(3)
-            self.desc2 = r.group(4).strip()
+            self.type = r.group("Type")
+            self.id = r.group("Number")
             
+            if r.group("Description") is not None:
+                self.desc1 = r.group("Description").strip()
+                self.memo = r.group("Description").strip()
+                if r.group("Name") is not None:
+                    self.memo = self.memo + " " + r.group("Name").strip()
+                    self.desc2 = r.group("Name").strip()
+                    
+            elif r.group("Name") is not None:
+                self.memo = r.group("Name").strip()
+                self.desc2 = r.group("Name").strip()
+            
+            if r.group("IBAN") is not None:
+                self.payee = r.group("IBAN")
+                if r.group("Name") is not None:
+                    self.payee = self.payee + " (" + r.group("Name") + ")"
+            # fallback for old system
+            elif r.group("Konto") is not None:
+                self.payee = r.group("Konto")
+                
             # transfer
-            if (self.type == "BG" or self.type == "FE") \
-               and len(self.desc2) > 0 and len(self.desc1) > 0:
+            if self.type in ["BG", "FE", "VB", "MB"] and len(self.desc2) > 0 and len(self.desc1) > 0:
                 self.htype = "transfer"
-                m = re.match("^(([A-Z0-9]+\W)?[A-Z]*[0-9]+)\W(\w+\W+\w+)\W*(.*)$", self.desc2)
-                if m is not None:
-                    self.payee = m.group(3) + " (" + m.group(1) + ")"
-                    self.desc2 = m.group(1)
-                    self.memo = self.desc1 + " " + m.group(4)
             
             # BG can meen "Bankgebuehren" (bankfee), therefore the desc2 XOR desc1 is empty
-            elif (self.type in ["BG", "RI"] and len(self.desc2) == 0):
-                self.memo = self.desc1
+            elif self.type in ["BG", "RI"]:
                 self.htype = "bankfee"
-                    
-            elif (self.type in ["BG", "RI"] and len(self.desc1) == 0):
-                self.memo = self.desc2
-                self.htype = "bankfee"
-                    
-            # not really a transfer, but use the information we have
-            elif self.type == "MC" and len(self.desc1) == 0:
-                self.memo = self.desc2
-                    
-            elif self.type == "MC" and len(self.desc2) == 0:
-                self.memo = self.desc1
+                self.payee = "easybank"
+            
+            # Maestro/Master card (cash card) things
+            elif self.type == "MC" and len(self.desc1) > 0:
+                self.payee = "Bankomat"
                 
-            # Maestro card (cash card) things
-            elif self.type == "MC" \
-                and len(self.desc1) > 0 and len(self.desc2) > 0:
+                # Master card
+                m = re.match("^easykreditkarte", self.desc1)
+                if m is not None:
+                    self.htype = "transfer"
+                    self.payee = self.desc1
+                    self.memo = ""
+                    
                 # withdraw with cash card
                 m = re.match("^((Auszahlung)\W+\w+)\W*(.*)$", self.desc1)
                 if m is not None:
@@ -119,7 +128,7 @@ class Transaction(object):
                     self.memo = m.group(1)
                     if len(m.group(3)) > 0:
                         self.memo += " (" + m.group(3) + ")" 
-                    self.memo += " " + self.desc2
+                        
                 # payment with cash card
                 m = re.match("^((Bezahlung)\W+\w+)\W*(.*)$", self.desc1)
                 if m is not None:
@@ -127,8 +136,10 @@ class Transaction(object):
                     self.memo = m.group(1)
                     if len(m.group(3)) > 0:
                         self.memo += " (" + m.group(3) + ")" 
-                    self.memo += " " + self.desc2
             
+                if len(self.desc2) > 0:
+                    self.memo += " " + self.desc2
+                    
             # mixture of transfer, cash card payments
             elif self.type == "VD":
                 # if we have a value for desc1 but not for desc2
@@ -136,6 +147,9 @@ class Transaction(object):
                 if len(self.desc1) > 0 and len(self.desc2) == 0:
                     self.htype = "payment"
                     self.memo = self.desc1
+                    if self.payee is None:
+                        m = re.match("^(?P<Name>[^ ]+)", self.desc1)
+                        self.payee = m.group("Name")
                     
                 # if we have values for both desc fields it may be a transfer
                 elif len(self.desc1) > 0 and len(self.desc2) > 0:
@@ -143,25 +157,21 @@ class Transaction(object):
                     self.memo = self.desc1
                     m = re.match("^(([A-Z0-9]+\W)?[A-Z]*[0-9]+)?\W*(\w+\W+\w+)\W*(.*)$", self.desc2)
                     if m is not None:
-                        self.payee = m.group(3)
-                        if m.group(1) is not None:
-                            self.payee += " (" + m.group(1) + ")"
+                        if self.payee is None:
+                            self.payee = m.group(3)
+                            if m.group(1) is not None:
+                                self.payee += " (" + m.group(1) + ")"
                         
                         self.memo += " " + m.group(4)
             
             # OG also seems to be a payment transaction
-            elif self.type == "OG":
-                self.htype = "payment"
-                # here we have desc1 and desc2
-                self.memo = "{} {}".format(self.desc1, self.desc2)
-                
-                
-            # seems to be an cash card payment, however, I don't have enough
-            # infos about it
-            #elif self.type == "OG":
-            else:
-                # use what we have
-                self.memo = self.desc1 + " " + self.desc2
+            elif self.type in ["OG", "BX"]:
+                if r.group("IBAN") is None:
+                    self.htype = "bankfee"
+                    self.payee = "easybank"
+                else:
+                    self.htype = "payment"
+            
         
         # if we got an unkown description field, use it as memo
         else:
@@ -205,6 +215,7 @@ class Transaction(object):
     def getQIFstr(self):
         ret = 'D{}\n'.format(self.date) + \
               'T{}\n'.format(self.amount) + \
+              'C{}\n'.format(self.category) + \
               'M{}\n'.format(self.memo)
 
         if self.payee is not None:
