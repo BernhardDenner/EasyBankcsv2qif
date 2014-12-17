@@ -21,6 +21,7 @@ Currently I'm using this script for converting Easybank and Bawag-PSK CSV file i
 ## _easyBankcsv2qifFrontend.py_
 
 This script is a small GTK3 frontend for easyBankcsv2qif.py. It takes the input file's filename as parameter, asks the user for the output filename, does the csv 2 qif conversion and after a short summary the input file is deleted. This script is designed to open the downloaded CSV file from the ebanking Webapp directly with the browser, thus avoiding the need of the command line.
+Additionally an account name can be specified, which will be added to the QIF file. This information can be used to directly refer to a Homebanks account name, thus having selected the correct import target account. Already entered account names are stored in _~/.config/easyBankcsv2qifFrontend.conf_ and don't need to be typed again.
 
 Note: the Frontend script uses a fixed enconding, from iso-8859-1 to utf-8
 
