@@ -62,6 +62,7 @@ class Transaction(object):
         self.htype = ""
         self.desc1 = ""
         self.desc2 = ""
+        
 
     def setTransaction(self, account, description, date, valutadate, amount, currency):
         self.account = account
@@ -113,21 +114,34 @@ class Transaction(object):
             elif self.type == "MC" \
                 and len(self.desc1) > 0 and len(self.desc2) > 0:
                 # withdraw with cash card
-                m = re.match("^((Auszahlung)\W+\w+)\W*(.*)$", self.desc1)
-                if m is not None:
-                    self.htype = "withdraw"
-                    self.memo = m.group(1)
-                    if len(m.group(3)) > 0:
-                        self.memo += " (" + m.group(3) + ")" 
-                    self.memo += " " + self.desc2
+                m1 = re.match("^((Auszahlung)\W+\w+)\W*(.*)$", self.desc1)
+                
                 # payment with cash card
-                m = re.match("^((Bezahlung)\W+\w+)\W*(.*)$", self.desc1)
-                if m is not None:
-                    self.htype = "payment"
-                    self.memo = m.group(1)
-                    if len(m.group(3)) > 0:
-                        self.memo += " (" + m.group(3) + ")" 
+                m2 = re.match("^((Bezahlung)\W+\w+)\W*(.*)$", self.desc1)
+                
+                if m1 is not None:
+                    self.htype = "withdraw"
+                    self.memo = m1.group(1)
+                    if len(m1.group(3)) > 0:
+                        self.memo += " (" + m1.group(3) + ")" 
                     self.memo += " " + self.desc2
+                    
+                elif m2 is not None:
+                    self.htype = "payment"
+                    self.memo = m2.group(1)
+                    if len(m2.group(3)) > 0:
+                        self.memo += " (" + m2.group(3) + ")" 
+                    self.memo += " " + self.desc2
+                
+                else:
+                    # credit card bill and other infos
+                    if re.match("^Abrechnung.*", self.desc2):
+                        self.htype = "credit card bill"
+                    else:
+                        self.htype = "unknown"
+                    
+                    self.memo = "{} {}".format(self.desc1, self.desc2)              
+                
             
             # mixture of transfer, cash card payments
             elif self.type == "VD":
@@ -185,7 +199,9 @@ class Transaction(object):
         return string
 
             
-    def printDebug(self):
+    def printDebug(self, raw=None):
+        if raw is not None:
+            	print('CSV line: "{}"'.format(raw), file=sys.stderr)
         print('account: {},'.format(self.account),
               'date: {},'.format(self.date),
               'amount: {} {}'.format(self.amount, self.currency), 
@@ -242,7 +258,8 @@ class EasyCSV2QIFconverter:
                   '!Type:Bank', 
                   sep='\n', file=self._outstream)
 
-        rows = csv.reader(self._instream, delimiter=';')
+        delimiter = ';'
+        rows = csv.reader(self._instream, delimiter=delimiter)
         for l in rows:
             if len(l) < 6:
                 print ('ignoring invalid line:', l, file=sys.stderr)
@@ -263,7 +280,7 @@ class EasyCSV2QIFconverter:
             # some debugging
             if doDebug:
                 #print('csv: {}'.format(l), file=sys.stderr)
-                t.printDebug()
+                t.printDebug(';'.join(l))
 
             # count abount of different transaction types 
             if t.htype in self._transSummary:

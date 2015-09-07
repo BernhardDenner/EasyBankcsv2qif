@@ -151,7 +151,12 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(t.memo, "Entgelt fuer Mahnung")
         self.assertEqual(t.payee, None)
         
-
+    def testCreditCardBill1(self):
+        t = self.gTdesc("easy kreditkarte VISA                        MC/000000338 Abrechnung Nr. 000000020")
+        self.assertEqual(t.type, "MC")
+        self.assertEqual(t.htype, "credit card bill")
+        self.assertEqual(t.memo, "easy kreditkarte VISA Abrechnung Nr. 000000020")
+        self.assertEqual(t.payee, None)
 
         
 if __name__ == '__main__':

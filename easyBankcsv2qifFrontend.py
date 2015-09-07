@@ -182,4 +182,4 @@ if __name__ == "__main__":
     f.processedDialog(converter.getSummary())
 
     # remove the csv file
-    os.unlink(csvFilename)
+    # os.unlink(csvFilename) better keep them
