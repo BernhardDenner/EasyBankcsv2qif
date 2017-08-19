@@ -84,8 +84,14 @@ class Transaction(object):
             self.id = r.group(3)
             self.desc2 = r.group(4).strip()
             
+            # Cash withdraw
+            if (self.type == "BG" and \
+                (self.desc1 == "Auszahlung Karte" or self.desc1 == "Auszahlung Maestro")):
+                self.htype = "withdraw"
+                self.memo = "{} {}".format(self.desc1, self.desc2)
+
             # transfer
-            if (self.type == "BG" or self.type == "FE") \
+            elif (self.type == "BG" or self.type == "FE") \
                and len(self.desc2) > 0 and len(self.desc1) > 0:
                 self.htype = "transfer"
                 m = re.match("^(([A-Z0-9]+\W)?[A-Z]*[0-9]+)\W(\w+\W+\w+)\W*(.*)$", self.desc2)

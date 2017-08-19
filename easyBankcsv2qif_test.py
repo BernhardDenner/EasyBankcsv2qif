@@ -165,6 +165,13 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(t.memo, "OEAMTC")
         self.assertEqual(t.payee, "OEAMTC (AT813100000000156109)")
 
+    def testCashWithdrawal(self):
+        t = self.gTdesc("Auszahlung Karte                             BG/000002778 AUTOMAT S6EE5039 0063 Karte3 12.05.2017 UM 08:32")
+        self.assertEqual(t.type, "BG")
+        self.assertEqual(t.htype, "withdraw")
+        self.assertEqual(t.memo, "Auszahlung Karte AUTOMAT S6EE5039 0063 Karte3 12.05.2017 UM 08:32")
+        self.assertEqual(t.payee, None)
+
         
 if __name__ == '__main__':
     unittest.main()
