@@ -93,6 +93,12 @@ class Transaction(object):
                     self.payee = m.group(3) + " (" + m.group(1) + ")"
                     self.desc2 = m.group(1)
                     self.memo = self.desc1 + " " + m.group(4)
+                else:
+                    m = re.match("^([A-Z]{2}[0-9]{18})\s+(.*)$", self.desc2)
+                    if m is not None:
+                        self.payee = "{} ({})".format(m.group(2), m.group(1))
+                        self.desc2 = m.group(2)
+                        self.memo = m.group(2)
             
             # BG can meen "Bankgebuehren" (bankfee), therefore the desc2 XOR desc1 is empty
             elif (self.type in ["BG", "RI"] and len(self.desc2) == 0):

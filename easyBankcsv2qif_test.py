@@ -158,6 +158,13 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(t.memo, "easy kreditkarte VISA Abrechnung Nr. 000000020")
         self.assertEqual(t.payee, None)
 
+    def testOnlineTransaction(self):
+        t = self.gTdesc("Abbuchung Onlinebanking         100270564074 FE/000002769 AT813100000000156109 OEAMTC")
+        self.assertEqual(t.type, "FE")
+        self.assertEqual(t.htype, "transfer")
+        self.assertEqual(t.memo, "OEAMTC")
+        self.assertEqual(t.payee, "OEAMTC (AT813100000000156109)")
+
         
 if __name__ == '__main__':
     unittest.main()
