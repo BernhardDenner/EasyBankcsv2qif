@@ -25,8 +25,8 @@ def createArgParser():
     parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
     parser.add_argument('-o', '--output',
                         help="output file, to write the resulting QIF. If not given stdout is used")
-    parser.add_argument('-a', '--account', 
-                        help="account name to use, if not given no account name information will be in the QIF") 
+    parser.add_argument('-a', '--account',
+                        help="account name to use, if not given no account name information will be in the QIF")
     parser.add_argument('-d', '--debug', action="store_true",
                         help='print debugging information to stderr, this option includes -s')
     parser.add_argument('-s', '--summary', action="store_true",
@@ -62,7 +62,7 @@ class Transaction(object):
         self.htype = ""
         self.desc1 = ""
         self.desc2 = ""
-        
+
 
     def setTransaction(self, account, description, date, valutadate, amount, currency):
         self.account = account
@@ -83,7 +83,7 @@ class Transaction(object):
             self.type = r.group(2)
             self.id = r.group(3)
             self.desc2 = r.group(4).strip()
-            
+
             # Cash withdraw
             if (self.type == "BG" and \
                 (self.desc1 == "Auszahlung Karte" or self.desc1 == "Auszahlung Maestro")):
@@ -105,56 +105,56 @@ class Transaction(object):
                         self.payee = "{} ({})".format(m.group(2), m.group(1))
                         self.desc2 = m.group(2)
                         self.memo = m.group(2)
-            
+
             # BG can meen "Bankgebuehren" (bankfee), therefore the desc2 XOR desc1 is empty
             elif (self.type in ["BG", "RI"] and len(self.desc2) == 0):
                 self.memo = self.desc1
                 self.htype = "bankfee"
-                    
+
             elif (self.type in ["BG", "RI"] and len(self.desc1) == 0):
                 self.memo = self.desc2
                 self.htype = "bankfee"
-                    
+
             # not really a transfer, but use the information we have
             elif self.type == "MC" and len(self.desc1) == 0:
                 self.memo = self.desc2
-                    
+
             elif self.type == "MC" and len(self.desc2) == 0:
                 self.memo = self.desc1
-                
+
             # Maestro card (cash card) things
             elif self.type == "MC" \
                 and len(self.desc1) > 0 and len(self.desc2) > 0:
                 # withdraw with cash card
                 m1 = re.match("^((Auszahlung)\W+\w+)\W*(.*)$", self.desc1)
-                
+
                 # payment with cash card
                 m2 = re.match("^((Bezahlung)\W+\w+)\W*(.*)$", self.desc1)
-                
+
                 if m1 is not None:
                     self.htype = "withdraw"
                     self.memo = m1.group(1)
                     if len(m1.group(3)) > 0:
-                        self.memo += " (" + m1.group(3) + ")" 
+                        self.memo += " (" + m1.group(3) + ")"
                     self.memo += " " + self.desc2
-                    
+
                 elif m2 is not None:
                     self.htype = "payment"
                     self.memo = m2.group(1)
                     if len(m2.group(3)) > 0:
-                        self.memo += " (" + m2.group(3) + ")" 
+                        self.memo += " (" + m2.group(3) + ")"
                     self.memo += " " + self.desc2
-                
+
                 else:
                     # credit card bill and other infos
                     if re.match("^Abrechnung.*", self.desc2):
                         self.htype = "credit card bill"
                     else:
                         self.htype = "unknown"
-                    
-                    self.memo = "{} {}".format(self.desc1, self.desc2)              
-                
-            
+
+                    self.memo = "{} {}".format(self.desc1, self.desc2)
+
+
             # mixture of transfer, cash card payments
             elif self.type == "VD":
                 # if we have a value for desc1 but not for desc2
@@ -162,7 +162,7 @@ class Transaction(object):
                 if len(self.desc1) > 0 and len(self.desc2) == 0:
                     self.htype = "payment"
                     self.memo = self.desc1
-                    
+
                 # if we have values for both desc fields it may be a transfer
                 elif len(self.desc1) > 0 and len(self.desc2) > 0:
                     self.htype = "transfer"
@@ -172,30 +172,30 @@ class Transaction(object):
                         self.payee = m.group(3)
                         if m.group(1) is not None:
                             self.payee += " (" + m.group(1) + ")"
-                        
+
                         self.memo += " " + m.group(4)
-            
+
             # OG also seems to be a payment transaction
             elif self.type == "OG":
                 self.htype = "payment"
                 # here we have desc1 and desc2
                 self.memo = "{} {}".format(self.desc1, self.desc2)
-                
-                
+
+
             # seems to be an cash card payment, however, I don't have enough
             # infos about it
             #elif self.type == "OG":
             else:
                 # use what we have
                 self.memo = self.desc1 + " " + self.desc2
-        
+
         # if we got an unkown description field, use it as memo
         else:
-            self.memo = self.description    
-                        
+            self.memo = self.description
+
         if self.htype == "":
             self.htype = 'unknown'
-            
+
         # finally, some clean up
         self.memo = self.cleanStr(self.memo)
         self.payee = self.cleanStr(self.payee)
@@ -203,20 +203,20 @@ class Transaction(object):
 
     def cleanStr(self, string):
         if string is not None:
-            # remove too much whitespace 
+            # remove too much whitespace
             # begin and end and more than two in the middle
             pat = re.compile(r'\s\s+')
             string = pat.sub(" ", string.strip())
-            
+
         return string
 
-            
+
     def printDebug(self, raw=None):
         if raw is not None:
-            	print('CSV line: "{}"'.format(raw), file=sys.stderr)
+            print('CSV line: "{}"'.format(raw), file=sys.stderr)
         print('account: {},'.format(self.account),
               'date: {},'.format(self.date),
-              'amount: {} {}'.format(self.amount, self.currency), 
+              'amount: {} {}'.format(self.amount, self.currency),
               file=sys.stderr)
 
         print('desc: {}'.format(self.description),
@@ -229,7 +229,7 @@ class Transaction(object):
               '-------------------------------------------',
               file=sys.stderr, sep='\n')
 
-        
+
     def getQIFstr(self):
         ret = 'D{}\n'.format(self.date) + \
               'T{}\n'.format(self.amount) + \
@@ -267,7 +267,7 @@ class EasyCSV2QIFconverter:
                   'N{}'.format(self._account),
                   'Tcash',
                   '^',
-                  '!Type:Bank', 
+                  '!Type:Bank',
                   sep='\n', file=self._outstream)
 
         delimiter = ';'
@@ -276,9 +276,9 @@ class EasyCSV2QIFconverter:
             if len(l) < 6:
                 print ('ignoring invalid line:', l, file=sys.stderr)
                 continue
-                
+
             l = map(self.changeEncoding, l)
-                
+
             t = Transaction()
             t.setTransaction(l[0],  # account
                              l[1],  # description
@@ -294,7 +294,7 @@ class EasyCSV2QIFconverter:
                 #print('csv: {}'.format(l), file=sys.stderr)
                 t.printDebug(';'.join(l))
 
-            # count abount of different transaction types 
+            # count abount of different transaction types
             if t.htype in self._transSummary:
                 self._transSummary[t.htype] += 1
             else:
@@ -309,7 +309,7 @@ class EasyCSV2QIFconverter:
     def changeEncoding(self, text):
         if self._encFrom != None and self._encTo != None:
             return text.decode(self._encFrom).encode(self._encTo)
-        
+
         return text
 
 
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     else:
         instream = sys.stdin
 
-    
+
     if args.output:
         try:
             outstream = open(args.output, 'w')
@@ -359,7 +359,7 @@ if __name__ == "__main__":
 
     converter = EasyCSV2QIFconverter(instream, outstream, args.account)
     if args.encto and args.encfrom:
-        converter.setEncoding(args.encfrom, args.encto)    
+        converter.setEncoding(args.encfrom, args.encto)
 
     converter.convert()
     if args.debug or args.summary:

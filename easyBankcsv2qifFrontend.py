@@ -25,10 +25,10 @@ class Frontend(object):
         object.__init__(self)
         self._config = None
         self.readConfigFile()
-        
+
         self.account = None
         self.newFilename = None
-        
+
 
     def saveDialog(self, filename):
         dialog = Gtk.FileChooserDialog("Please choose a file", None,
@@ -40,42 +40,42 @@ class Frontend(object):
         dialog.set_current_name(filename)
         dialog.props.title = "save file in QIF format, choose a name..."
 
-        # add a ComboBoxText to specify the Name of the Account 
-        # to be specified in the QIF file        
+        # add a ComboBoxText to specify the Name of the Account
+        # to be specified in the QIF file
         box = dialog.get_content_area()
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=50)
         box.add(hbox)
-        
+
         label = Gtk.Label("Select Account name:")
         combo = Gtk.ComboBoxText.new_with_entry()
         hbox.pack_start(label, True, True, 10)
         hbox.pack_start(combo, True, True, 10)
-        
+
         # add known account names to the combobox
         for i in self._config[CONF_DIR_ACCOUNTS]:
             combo.append_text(i)
-            
+
         # select the first one
         if self._config[CONF_DIR_ACCOUNTS]:
             combo.set_active(0)
-                
+
         dialog.show_all()
 
         # show the dialog and wait for user response
         response = dialog.run()
         self.newFilename = None
-        
+
         if response == Gtk.ResponseType.OK:
             self.newFilename = dialog.get_filename()
 
         self.account = combo.get_active_text()
-        
+
         # write new account to the config file
         if len(self.account) > 0 \
            and self.account not in self._config[CONF_DIR_ACCOUNTS]:
             self._config[CONF_DIR_ACCOUNTS].append(self.account)
             self.writeConfigFile()
-        
+
         dialog.destroy()
         return self.newFilename
 
@@ -89,7 +89,7 @@ class Frontend(object):
 
         dialog.run()
         dialog.destroy()
-        
+
 
     def errorMessage(self, headline, message):
         dialog = Gtk.MessageDialog(type=Gtk.MessageType.ERROR,
@@ -99,8 +99,8 @@ class Frontend(object):
         dialog.format_secondary_text(message)
         dialog.run()
         dialog.destroy()
-        
-        
+
+
     def readConfigFile(self):
         conf = None
         try:
@@ -109,11 +109,11 @@ class Frontend(object):
             confFile.close()
         except IOError as detail:
             print detail
-        
+
         # check/initialize configuration
         if type(conf) != dict:
             conf = {}
-            
+
         if CONF_DIR_ACCOUNTS not in conf:
             conf[CONF_DIR_ACCOUNTS] = []
 
@@ -124,22 +124,22 @@ class Frontend(object):
     def writeConfigFile(self, conf = None):
         if conf == None:
             conf = self._config
-            
+
         try:
             confFile = open(DEFAULT_CONFIG_FILE, 'w')
             json.dump(conf, confFile)
             confFile.close()
         except IOError as detail:
             print detail
-            
-            
-    
+
+
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print "Usage: " + sys.argv[0] + " <filename>"
         sys.exit(1)
-    
+
     f = Frontend()
 
     csvFilename = sys.argv[1]
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         instream = open(csvFilename, 'r')
     except IOError as detail:
         f.errorMessage("could not open input file '" + csvFilename + "'",
-            str(detail))    
+            str(detail))
         sys.exit(1)
 
     newFilename = os.path.basename(csvFilename)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     f.saveDialog(newFilename)
     newFilename = f.newFilename
     account = f.account or ''
-    
+
     if newFilename == None:
         instream.close()
         sys.exit(0)
