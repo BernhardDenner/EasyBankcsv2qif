@@ -21,7 +21,7 @@ doDebug = False
 
 
 def createArgParser():
-    parser = argparse.ArgumentParser(description='Convert a EasyBank or Bawak CSV to QIF format')
+    parser = argparse.ArgumentParser(description='Convert an easybank or BAWAG CSV export file to QIF format')
     parser.add_argument('file', help='input file in CSV format. If file is - sdtin is used')
     parser.add_argument('-o', '--output',
                         help="output file, to write the resulting QIF. If not given stdout is used")
