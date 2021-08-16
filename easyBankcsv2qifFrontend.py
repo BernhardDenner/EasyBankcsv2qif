@@ -3,10 +3,13 @@
 Author: bernhard.denner@gmail.com
 Date: 16. Feb 2014
 '''
+from __future__ import print_function
 import sys, os
 import os.path
 import json
 import easyBankcsv2qif
+import gi
+gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 
@@ -31,10 +34,15 @@ class Frontend(object):
 
 
     def saveDialog(self, filename):
-        dialog = Gtk.FileChooserDialog("Please choose a file", None,
-            Gtk.FileChooserAction.SAVE,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
+        dialog = Gtk.FileChooserDialog(title="Please choose a file",
+                parent=None,
+                action=Gtk.FileChooserAction.SAVE)
+
+        dialog.add_buttons(
+                Gtk.STOCK_CANCEL,
+                Gtk.ResponseType.CANCEL,
+                Gtk.STOCK_SAVE,
+                Gtk.ResponseType.OK)
 
         dialog.set_do_overwrite_confirmation(True)
         dialog.set_current_name(filename)
@@ -46,7 +54,7 @@ class Frontend(object):
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=50)
         box.add(hbox)
 
-        label = Gtk.Label("Select Account name:")
+        label = Gtk.Label(label="Select Account name:")
         combo = Gtk.ComboBoxText.new_with_entry()
         hbox.pack_start(label, True, True, 10)
         hbox.pack_start(combo, True, True, 10)
@@ -108,7 +116,7 @@ class Frontend(object):
             conf = json.load(confFile)
             confFile.close()
         except IOError as detail:
-            print detail
+            print(detail)
 
         # check/initialize configuration
         if type(conf) != dict:
@@ -130,14 +138,14 @@ class Frontend(object):
             json.dump(conf, confFile)
             confFile.close()
         except IOError as detail:
-            print detail
+            print(detail)
 
 
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Usage: " + sys.argv[0] + " <filename>"
+        print("Usage: " + sys.argv[0] + " <filename>")
         sys.exit(1)
 
     f = Frontend()
