@@ -258,8 +258,6 @@ class EasyCSV2QIFconverter:
         self._outstream = outstream
         self._account = account
         self._transSummary = {}
-        self._encFrom = None
-        self._encTo = None
 
     def convert(self):
         if self._account is not None:
@@ -277,8 +275,6 @@ class EasyCSV2QIFconverter:
                 print ('ignoring invalid line:', l, file=sys.stderr)
                 continue
 
-            l = map(self.changeEncoding, l)
-
             t = Transaction()
             t.setTransaction(l[0],  # account
                              l[1],  # description
@@ -291,7 +287,6 @@ class EasyCSV2QIFconverter:
 
             # some debugging
             if doDebug:
-                #print('csv: {}'.format(l), file=sys.stderr)
                 t.printDebug(';'.join(l))
 
             # count abount of different transaction types
@@ -326,7 +321,7 @@ if __name__ == "__main__":
 
     if args.file != "-":
         try:
-            instream = open(args.file, 'r')
+            instream = open(args.file, mode='r', encoding=args.encfrom)
         except IOError as detail:
             print('could not open input file:', detail, file=sys.stderr)
             sys.exit(1)
@@ -337,7 +332,7 @@ if __name__ == "__main__":
 
     if args.output:
         try:
-            outstream = open(args.output, 'w')
+            outstream = open(args.output, mode='w', encoding=args.encto)
         except IOError as detail:
             print('could not open output file:', detail, file=sys.stderr)
             sys.exit(1)
@@ -346,8 +341,6 @@ if __name__ == "__main__":
         outstream = sys.stdout
 
     converter = EasyCSV2QIFconverter(instream, outstream, args.account)
-    if args.encto and args.encfrom:
-        converter.setEncoding(args.encfrom, args.encto)
 
     converter.convert()
     if args.debug or args.summary:

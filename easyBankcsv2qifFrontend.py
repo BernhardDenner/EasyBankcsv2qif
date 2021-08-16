@@ -153,7 +153,7 @@ if __name__ == "__main__":
     csvFilename = sys.argv[1]
     instream = None
     try:
-        instream = open(csvFilename, 'r')
+        instream = open(csvFilename, mode='r', encoding=DEFAULT_ENC_FROM)
     except IOError as detail:
         f.errorMessage("could not open input file '" + csvFilename + "'",
             str(detail))
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
     outstream = None
     try:
-        outstream = open(newFilename, 'w')
+        outstream = open(newFilename, mode='w', encoding=DEFAULT_ENC_TO)
     except IOError as detail:
         f.errorMessage("could not open output file", str(detail))
         instream.close()
@@ -180,7 +180,6 @@ if __name__ == "__main__":
 
     # do processing here
     converter = easyBankcsv2qif.EasyCSV2QIFconverter(instream, outstream, account)
-    converter.setEncoding(DEFAULT_ENC_FROM, DEFAULT_ENC_TO)
     converter.convert()
 
     instream.close()
