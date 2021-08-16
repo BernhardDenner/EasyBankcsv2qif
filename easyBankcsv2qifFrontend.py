@@ -89,7 +89,7 @@ class Frontend(object):
 
 
     def processedDialog(self, message):
-        dialog = Gtk.MessageDialog(type=Gtk.MessageType.INFO,
+        dialog = Gtk.MessageDialog(message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK)
         dialog.props.title = "EasyBank CSV to QIF finished"
         dialog.props.text = "CSV 2 QIF converstion finished"
@@ -100,7 +100,7 @@ class Frontend(object):
 
 
     def errorMessage(self, headline, message):
-        dialog = Gtk.MessageDialog(type=Gtk.MessageType.ERROR,
+        dialog = Gtk.MessageDialog(message_type=Gtk.MessageType.ERROR,
             buttons=Gtk.ButtonsType.OK)
         dialog.props.title = "Error"
         dialog.props.text = headline

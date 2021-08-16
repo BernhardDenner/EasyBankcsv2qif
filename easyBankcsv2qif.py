@@ -301,22 +301,10 @@ class EasyCSV2QIFconverter:
                 self._transSummary[t.htype] = 1
 
 
-    def setEncoding(self, encodingFrom, encodingTo):
-        self._encFrom = encodingFrom
-        self._encTo = encodingTo
-
-
-    def changeEncoding(self, text):
-        if self._encFrom != None and self._encTo != None:
-            return text.decode(self._encFrom).encode(self._encTo)
-
-        return text
-
-
     def getSummary(self):
         ret = ""
         count = 0
-        for k, v in self._transSummary.iteritems():
+        for k, v in self._transSummary.items():
             ret += '  {}:\t{}\n'.format(k, v)
             count += v
         ret += 'total transcation converted: {}\n'.format(count)
